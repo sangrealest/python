@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import time, calendar
 import sys, os,ConfigParser, datetime
 
@@ -21,8 +21,16 @@ class MongoBackup():
 
     def db_backup(self):
         print "Do DB backup"
-        os.system("mongodump --host "+str(self.host)+ " --port "+ str(self.port) + " -d " + str(self.db_name) +
-                  " -o " + str(self.db_output) + "/" + str(self.db_name) + "_" + str(self.datetime_gmt_yyyymmdd_int(gmt=8)))
+        db_list = str(self.db_name).replace(', ',',').split(',')
+        print db_list
+        for num in range(0,len(db_list)):
+            os.system("mongodump --host "+str(self.host)+ " --port "+ str(self.port) + " -d " + str(db_list[num]) +
+                      " -o " + str(self.db_output) + "/" + str(db_list[num]) + "_" + str(self.datetime_gmt_yyyymmdd_int(gmt=8)))
+
+            gzname = str(db_list[num]) + "_" + str(self.datetime_gmt_yyyymmdd_int(gmt=8)) +".tar.bz2"
+            #压缩档案           #os.system('cd '+ str(self.db_output)+' && '+ 'tar jcf ' + gzname + ' ' +str(self.db_output)+'/' + str(db_list[num]) + '_' + str(self.datetime_gmt_yyyymmdd_int(gmt=8)) + '/'+str(db_list[num]) )
+            #刪除LOCAL的备份
+            #os.system('rm -R '+str(self.db_output)+ "/"+str(db_list[num]) + "_" + str(self.datetime_gmt_yyyymmdd_int(gmt=8)))
 
     def oplog_backup(self, starttime, endtime):
         try:
@@ -36,6 +44,11 @@ class MongoBackup():
             end_name = end_name.replace(':','')
             end_name = end_name.replace('-','')
             os.system('mongodump --host '+str(self.host)+ ' --port '+ str(self.port) + ' -d local -c oplog.rs -q ' + str(query) + ' -o ' + str(self.oplog_output) + '/local' + '_' + str(start_name) + '_' + str(end_name))
+            gzname = 'local_'+str(start_name) + '_' + str(end_name)+ '.tar.bz2'
+            #压缩档案           os.system('cd '+ str(self.oplog_output) +' && '+ 'tar jcf '+ gzname + ' ' +str(self.oplog_output)+'/local' + '_' + str(start_name) + '_' + str(end_name)+ '/local')
+            #刪除LOCAL的备份
+            os.system('rm -R '+str(self.oplog_output)+'/local' + '_' + str(start_name) + '_' + str(end_name))
+
         except Exception as e:
             print "Error: ", str(e)
 
@@ -64,11 +77,13 @@ if __name__ == '__main__':
         date_name = datetime.datetime.fromtimestamp(int(now_time)).strftime('%Y-%m-%d ') + \
                     str(backupConfig.get('Backup', 'DB_BackupTime'))
         date_name = time.mktime(time.strptime(date_name, '%Y-%m-%d %H:%M:%S'))
-        #備份日備份檔案
+        #备份日备份档案
         if int(now_time) == int(date_name):
             back.db_backup()
             back.db_settingbeforetime(now_time)
-        #備份Oplog檔案
+        #备份Oplog
         if (now_time - back.oplog_beforetime) > int(backupConfig.get('Backup', 'Oplog_BackupTime')):
             back.oplog_backup(starttime=back.oplog_beforetime, endtime=now_time)
             back.oplog_settingbeforetime(now_time)
+
+
