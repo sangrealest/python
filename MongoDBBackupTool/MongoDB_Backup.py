@@ -9,7 +9,7 @@ class MongoBackup():
         self.oplog_beforetime = calendar.timegm(time.gmtime())
         self.backupConfig = backconfig
         self.host = self.backupConfig.get('Base', 'MongoHost')
-        self.port = self.backupConfig.get('Base', 'MongoPost')
+        self.port = self.backupConfig.get('Base', 'MongoPort')
         self.db_name = self.backupConfig.get('Backup', 'BackupDBName')
         self.MongoUser = self.backupConfig.get('Base', 'MongoUser')
         self.MongoPW = None
