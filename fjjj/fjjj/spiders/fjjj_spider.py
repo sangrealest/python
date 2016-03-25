@@ -11,18 +11,19 @@ class FjjjSpider(Spider):
     name = "fjjj"
     allowed_domains = ["jisilu.cn"]
     start_urls = [ 
-        "https://www.jisilu.cn/data/sfnew/detail/150195",
+         "http://www.qiushibaike.com/hot/"
+#        "https://www.jisilu.cn/data/sfnew/detail/150195",
 #        "https://www.jisilu.cn/data/sfnew/detail/150197"
     ]
     def parse(self, response):
         sel = Selector(response)
-        sites = sel.xpath('//div/table/tr/td/table/tr/td/table/tbody')
+        sites = sel.xpath('//div/div/div/div/div')
         items = []
 #        print sites
 
         for site in sites:
             item = FjjjItem()
-            name = site.xpath('tr/td/text()').extract()
+            name = site.xpath('div/text()').extract()
             value = site.xpath('tr/td/input/@value').extract()
             item['name'] = [t.encode('utf-8') for t in name]
             item['value'] = [v.encode('utf-8') for v in value]
