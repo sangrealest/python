@@ -25,7 +25,7 @@ class MongoRecovery():
     def recovery_daybackup(self):
         file_list = os.listdir(str(self.DB_BackupPath))
         large_name = 0
-        #找到最新的日期
+        #find the latest date
         for num in range(0, len(file_list)):
             reg_num = str(file_list[num]).replace(str(self.from_db_name)+'_', '')
             if int(reg_num) > int(large_name):
@@ -43,29 +43,29 @@ class MongoRecovery():
         Oplog_BackupPath = self.recoveryconfig.get('Recovery', 'Oplog_BackupPath')
         allfile_list = os.listdir(str(Oplog_BackupPath))
         re_file_list = list()
-        #還原日備份至最後還原前一個的Oplog檔案
+        #restore the oplog to the latest one
         for num in range(0, len(allfile_list)):
             if int(str(allfile_list[num])[len(key):len(key)+8]) >= int(datanum) and int(str(allfile_list[num])[len(key):len(key)+14]) < int(str(LastOplogName)[len(key):len(key)+14]):
                 print "Oplog_BackupPath: ",Oplog_BackupPath
                 print "str(allfile_list[num]): ", str(allfile_list[num])
                 os.system("mongorestore --host "+str(replayhost)+ " --port "+ str(replayport) + ' -d local -c oplog.rs --drop ' + str(Oplog_BackupPath) + "/" + str(allfile_list[num]) + "/local/oplog.rs.bson")
-                #對原本的replica set做replay
+                #replay the original replica set
                 os.system("mongooplog --host "+str(self.host)+ " --port "+ str(self.port) +' -d ' + str(self.to_db_name) + ' --from ' + str(replayhost)+':'+str(replayport))
 
-        #還原問題點的Oplog檔案
-        #先還原到新的replica set
+        #restore the Oplog to where error occured
+        #First restore to the latest replica set
         os.system("mongorestore --host "+str(replayhost)+ " --port "+ str(replayport) +' -d local -c oplog.rs --drop ' + str(Oplog_BackupPath) + "/" + str(LastOplogName) +"/local/oplog.rs.bson")
-        #只匯出錯誤時間點之前的紀錄並暫存至Reg
+        #restore to the time when error occured and save to Reg
         RecoryTimePoint = self.recoveryconfig.get('Recovery', 'RecoryTimePoint')
         query = '"{ts:{\$lte:'+str(RecoryTimePoint)+'}}"'
         os.system("mongodump --host "+str(replayhost)+ " --port "+ str(replayport) + " -d local -c oplog.rs -q "+ str(query) +" -o " + str(Oplog_BackupPath) + '/Reg')
 
-        #將Reg內的紀錄匯進新的replica set
+        #restore Reg to replica set
         os.system("mongorestore --host "+str(replayhost)+ " --port "+ str(replayport) +' -d local -c oplog.rs --drop ' + str(Oplog_BackupPath) + "/Reg/local/oplog.rs.bson")
-        #對原本的replica set做replay
+        #replay the original replica set
         os.system("mongooplog --host "+str(self.host)+ " --port "+ str(self.port) +' -d ' + str(self.to_db_name) + ' --from ' + str(replayhost)+':'+str(replayport))
 
-        #刪除暫存檔
+        #delete the temp Reg
         shutil.rmtree(os.path.abspath(str(Oplog_BackupPath) + '/Reg'))
 
 
@@ -73,9 +73,9 @@ if __name__ == '__main__':
     recoveryConfig = ConfigParser.RawConfigParser()
     recoveryConfig.read('setting.config')
     recovery = MongoRecovery(recoveryConfig)
-    #備份目前的Oplog
+    #backup current Oplog
     recovery.backup_oplog()
-    #還原為最新的日備份檔案
+    #restore to the latest one
     recovery.recovery_daybackup()
-    #透過oplog還原
+    #restore with oplog
     recovery.recovery_oplog()
